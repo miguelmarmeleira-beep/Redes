@@ -13,11 +13,15 @@ int unregister(const AppConfig *config,
 	/*`Build unregister message*/
     snprintf(message, sizeof(message), "UNR %s %s\n", uid, password);
 
+	printf("Sending: %s", message);
+
 	/*send unregister request and receive response*/
     if (send_udp_request(config, message, response, sizeof(response)) != 0) {
         printf("ERR\n");
         return -1;
     }
+
+	printf("Received: %s", response);
 
     /* Parse Directory Server response */
     if (sscanf(response, "%9s %9s", response_type, status) != 2) {
