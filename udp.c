@@ -1,64 +1,69 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
+#include <errno.h>
 #include <netdb.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 #include "udp.h"
+#include "validation.h"
 
 int send_udp_request(const AppConfig *config, const char *message,
                      char *response, int response_size)
 {
     struct addrinfo hints, *res;
-    int fd, errcode;
+    struct timeval tv = {5, 0};
+    struct iovec buffer;
+    struct msghdr reply;
     char port[6];
-    ssize_t nread;
+    int fd, result = -1;
+    ssize_t nread, nsent;
+    size_t length = strlen(message);
 
-    /* Create UDP socket */
-    fd = socket(AF_INET, SOCK_DGRAM, 0);
-
-    if (fd == -1)
+    if (response_size < 2)
         return -1;
-
-    /* Convert DS port from int to string */
+    response[0] = '\0';
     snprintf(port, sizeof(port), "%d", config->ds_port);
-
-    memset(&hints, 0, sizeof hints);
-
-    hints.ai_family = AF_INET;       /* IPv4 */
-    hints.ai_socktype = SOCK_DGRAM;  /* UDP socket */
-
-    errcode = getaddrinfo(config->ds_ip, port, &hints, &res);
-
-    if (errcode != 0) {
-        close(fd);
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+    if (getaddrinfo(config->ds_ip, port, &hints, &res) != 0)
+        return -1;
+    fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (fd < 0) {
+        freeaddrinfo(res);
         return -1;
     }
-
-    /* Send message to Directory Server */
-    if (sendto(fd, message, strlen(message), 0, res->ai_addr, res->ai_addrlen) == -1) {
-
+    /* UDP connect filtra datagramas que nao venham do IP/porto do DS. */
+    if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) != 0 ||
+        setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) != 0 ||
+        connect(fd, res->ai_addr, res->ai_addrlen) != 0) {
         freeaddrinfo(res);
         close(fd);
         return -1;
     }
-
-    /* Receive response from Directory Server */
-    nread = recvfrom(fd, response, response_size - 1, 0, NULL, NULL);
-
-    if (nread == -1) {
-        freeaddrinfo(res);
-        close(fd);
-        return -1;
-    }
-
-    /* Add string terminator */
-    response[nread] = '\0';
-
     freeaddrinfo(res);
-    close(fd);
+    do {
+        nsent = send(fd, message, length, 0);
+    } while (nsent < 0 && errno == EINTR);
+    if (nsent < 0 || (size_t)nsent != length)
+        goto done;
 
-    return 0;
+    buffer.iov_base = response;
+    buffer.iov_len = (size_t)response_size - 1;
+    memset(&reply, 0, sizeof(reply));
+    reply.msg_iov = &buffer;
+    reply.msg_iovlen = 1;
+    nread = recvmsg(fd, &reply, 0);
+    if (nread <= 0 || (reply.msg_flags & MSG_TRUNC) ||
+        !validate_protocol_message(response, nread))
+        goto done;
+    response[nread] = '\0';
+    result = 0;
+done:
+    if (result != 0)
+        response[0] = '\0';
+    close(fd);
+    return result;
 }
