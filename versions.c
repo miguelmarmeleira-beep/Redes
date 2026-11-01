@@ -29,8 +29,8 @@ int versions(const AppConfig *config, const char *filename)
                           : "error communicating with Directory Server");
         return -1;
     }
-    /* Cada registo completo ocupa pelo menos 18 bytes, incluindo separadores. */
-    capacity = strlen(response) / 18;
+    /* Um registo minimo tem 16 bytes: UID, tamanho, label, tempo, AVL e 4 espacos. */
+    capacity = strlen(response) / 16;
     type = strtok(response, " \n");
     status = strtok(NULL, " \n");
     if (type == NULL || status == NULL || strcmp(type, "RVR") != 0)

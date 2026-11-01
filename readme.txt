@@ -35,8 +35,8 @@ Limites atuais:
 - Respostas UDP ate 2047 bytes; cobre os 50 filenames previstos em RLS.
 - Respostas TCP recebidas em blocos, com memoria alocada conforme necessario.
   A lista de versoes so e apresentada depois de validada na totalidade.
-- Timeout UDP de 5 segundos; prazo total TCP de 5 segundos para ligar,
-  enviar o pedido e receber a resposta completa.
+- Timeout de 5 segundos nas operacoes de envio e rececao UDP e TCP.
+  Em TCP, cada chamada bloqueante tem o seu proprio limite de espera.
 - publication_time e mostrado tal como recebido, pois estes enunciados nao
   especificam o formato do campo.
 - where, get e servidor TCP de peers pertencem a fases posteriores.
