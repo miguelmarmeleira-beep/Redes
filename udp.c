@@ -56,9 +56,13 @@ int send_udp_request(const AppConfig *config, const char *message,
     reply.msg_iov = &buffer;
     reply.msg_iovlen = 1;
     nread = recvmsg(fd, &reply, 0);
-    if (nread <= 0 || (reply.msg_flags & MSG_TRUNC) ||
-        !validate_protocol_message(response, nread))
+    if (nread <= 0)
         goto done;
+    if ((reply.msg_flags & MSG_TRUNC) ||
+        !validate_protocol_message(response, (size_t)nread)) {
+        result = -2;
+        goto done;
+    }
     response[nread] = '\0';
     result = 0;
 done:

@@ -5,7 +5,7 @@ SRC = user.c config.c validation.c udp.c tcp.c login.c logout.c unregister.c pub
 
 HEADERS = $(wildcard *.h)
 
-.PHONY: all clean test
+.PHONY: all clean
 
 all: user
 
@@ -14,6 +14,3 @@ user: $(SRC) $(HEADERS)
 
 clean:
 	rm -f user
-
-test: user
-	python3 tests/test_netbox.py

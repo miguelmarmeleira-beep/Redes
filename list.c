@@ -12,8 +12,10 @@ int list_resources(const AppConfig *config)
     char *filenames[50];
     int count = 0;
 
-    if (send_udp_request(config, "LST\n", response, sizeof(response)) != 0) {
-        printf("error communicating with Directory Server\n");
+    int result = send_udp_request(config, "LST\n", response, sizeof(response));
+    if (result != 0) {
+        printf("%s\n", result == -2 ? "invalid response from Directory Server"
+                          : "error communicating with Directory Server");
         return -1;
     }
     type = strtok(response, " \n");

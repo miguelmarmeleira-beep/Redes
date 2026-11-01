@@ -4,6 +4,8 @@
 #include <netdb.h>
 #include <poll.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <time.h>
@@ -41,19 +43,18 @@ static int wait_socket(int fd, short events, long long deadline)
 }
 
 int send_tcp_request(const AppConfig *config, const char *message,
-                     char *response, int response_size)
+                     char **response)
 {
     struct addrinfo hints, *res;
     char port[6];
     int fd, flags, error = 0, result = -1;
     socklen_t error_size = sizeof(error);
     size_t written = 0, length = strlen(message);
-    int total_read = 0;
+    size_t total_read = 0, capacity = 4096;
+    char *buffer = NULL;
     long long deadline;
 
-    if (response_size < 2)
-        return -1;
-    response[0] = '\0';
+    *response = NULL;
     snprintf(port, sizeof(port), "%d", config->ds_port);
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
@@ -93,26 +94,51 @@ int send_tcp_request(const AppConfig *config, const char *message,
             goto done;
         written += (size_t)n;
     }
-    while (total_read < response_size - 1) {
+    buffer = malloc(capacity);
+    if (buffer == NULL)
+        goto done;
+    for (;;) {
         ssize_t n;
+        char *newline;
+        if (total_read == capacity - 1) {
+            char *grown;
+            if (capacity > SIZE_MAX / 2)
+                goto done;
+            grown = realloc(buffer, capacity * 2);
+            if (grown == NULL)
+                goto done;
+            buffer = grown;
+            capacity *= 2;
+        }
         if (wait_socket(fd, POLLIN, deadline) != 0)
             goto done;
-        n = read(fd, response + total_read, 1);
+        n = read(fd, buffer + total_read, capacity - total_read - 1);
         if (n < 0 && (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK))
             continue;
-        if (n <= 0)
+        if (n < 0)
             goto done;
-        if (response[total_read++] == '\n') {
-            response[total_read] = '\0';
-            if (validate_protocol_message(response, total_read))
-                result = 0;
+        if (n == 0) {
+            result = -2; /* EOF antes do terminador. */
+            goto done;
+        }
+        newline = memchr(buffer + total_read, '\n', (size_t)n);
+        total_read += (size_t)n;
+        if (newline != NULL) {
+            /* Uma ligacao corresponde a um pedido e a uma resposta. */
+            if (newline != buffer + total_read - 1 ||
+                !validate_protocol_message(buffer, total_read)) {
+                result = -2;
+                goto done;
+            }
+            buffer[total_read] = '\0';
+            *response = buffer;
+            buffer = NULL; /* O chamador passa a ser responsavel por free(). */
+            result = 0;
             goto done;
         }
     }
-    /* Sem terminador: buffer cheio, EOF e timeout sao sempre erros. */
 done:
-    if (result != 0)
-        response[0] = '\0';
+    free(buffer);
     close(fd);
     return result;
 }

@@ -60,7 +60,8 @@ int main(int argc, char *argv[])
                 int result = strcmp(args[0], "logout") == 0
                     ? logout(&config, current_uid, current_password)
                     : unregister(&config, current_uid, current_password);
-                if (result == 0) {
+                /* 1: o DS confirmou que a sessao ja nao existe. */
+                if (result >= 0) {
                     logged_in = 0;
                     memset(current_uid, 0, sizeof(current_uid));
                     memset(current_password, 0, sizeof(current_password));
@@ -94,7 +95,7 @@ int main(int argc, char *argv[])
                 printf("usage: versions filename\n");
             else
                 versions(&config, args[1]);
-				
+
         } else if (strcmp(args[0], "exit") == 0) {
             if (count != 1)
                 printf("usage: exit\n");

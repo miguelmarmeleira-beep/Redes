@@ -5,36 +5,26 @@
 
 #include "validation.h"
 
-int validate_port (int port){
-	
-	if (port < 1 || port > 65535)
-		return 0;
-	
-	return 1;
+int validate_uid(const char *uid)
+{
+    if (strlen(uid) != 6)
+        return 0;
+    for (int i = 0; i < 6; i++) {
+        if (!isdigit((unsigned char)uid[i]))
+            return 0;
+    }
+    return 1;
 }
 
-int validate_uid(const char *uid){
-	if (strlen(uid) != 6){
-		return 0;
-	}
-	for (int i = 0; i < 6; i++){
-		if(!isdigit((unsigned char)uid[i]))
-			return 0;
-	}
-
-	return 1;
-}
-
-int validate_password(const char *password){
-	if (strlen(password) != 8)
-		return 0;
-
-	for (int i = 0; i < 8; i++){
-		if(!isalnum((unsigned char)password[i]))
-			return 0;
-	}
-
-	return 1;
+int validate_password(const char *password)
+{
+    if (strlen(password) != 8)
+        return 0;
+    for (int i = 0; i < 8; i++) {
+        if (!isalnum((unsigned char)password[i]))
+            return 0;
+    }
+    return 1;
 }
 
 /* Valida se o nome cumpre: ate 24 carateres no total, base com alfanumericos, '-' ou '_',
@@ -95,11 +85,11 @@ long get_file_size(const char *filename)
     return (long)st.st_size;
 }
 
-int validate_protocol_message(const char *message, long size)
+int validate_protocol_message(const char *message, size_t size)
 {
     if (size < 2 || message[size - 1] != '\n' || message[0] == ' ')
         return 0;
-    for (long i = 0; i < size - 1; i++) {
+    for (size_t i = 0; i < size - 1; i++) {
         unsigned char c = (unsigned char)message[i];
         if (c < 32 || c > 126)
             return 0;

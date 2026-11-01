@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "versions.h"
@@ -7,13 +8,14 @@
 
 int versions(const AppConfig *config, const char *filename)
 {
-    char message[128], response[4096];
+    char message[128], *response;
     char *type, *status, *token;
-    /* Cada registo ocupa pelo menos 18 bytes no protocolo. */
     struct {
         char *uid, *label, *time, *availability;
         long size;
-    } entries[sizeof(response) / 18];
+    } *entries = NULL;
+    size_t capacity;
+    int result;
     size_t count = 0;
 
     if (!validate_filename(filename)) {
@@ -21,10 +23,14 @@ int versions(const AppConfig *config, const char *filename)
         return -1;
     }
     snprintf(message, sizeof(message), "VRS %s\n", filename);
-    if (send_tcp_request(config, message, response, sizeof(response)) != 0) {
-        printf("error communicating with Directory Server\n");
+    result = send_tcp_request(config, message, &response);
+    if (result != 0) {
+        printf("%s\n", result == -2 ? "invalid response from Directory Server"
+                          : "error communicating with Directory Server");
         return -1;
     }
+    /* Cada registo completo ocupa pelo menos 18 bytes, incluindo separadores. */
+    capacity = strlen(response) / 18;
     type = strtok(response, " \n");
     status = strtok(NULL, " \n");
     if (type == NULL || status == NULL || strcmp(type, "RVR") != 0)
@@ -32,14 +38,23 @@ int versions(const AppConfig *config, const char *filename)
     token = strtok(NULL, " \n");
     if (strcmp(status, "NOK") == 0 && token == NULL) {
         printf("no versions available for this resource\n");
+        free(response);
         return 0;
     }
     if (strcmp(status, "OK") != 0)
         goto invalid;
+    if (capacity == 0)
+        goto invalid;
+    entries = calloc(capacity, sizeof(*entries));
+    if (entries == NULL) {
+        printf("not enough memory to display versions\n");
+        free(response);
+        return -1;
+    }
     while (token != NULL) {
         char *size, *label, *time, *availability;
         long value;
-        if (count == sizeof(entries) / sizeof(entries[0]) || !validate_uid(token))
+        if (count == capacity || !validate_uid(token))
             goto invalid;
         size = strtok(NULL, " \n");
         label = strtok(NULL, " \n");
@@ -68,8 +83,12 @@ int versions(const AppConfig *config, const char *filename)
                entries[i].uid, entries[i].size, entries[i].label, entries[i].time,
                strcmp(entries[i].availability, "AVL") == 0 ? "online" : "offline");
     }
+    free(entries);
+    free(response);
     return 0;
 invalid:
     printf("invalid response from Directory Server\n");
+    free(entries);
+    free(response);
     return -1;
 }

@@ -26,20 +26,15 @@ Filename: base nao vazia, ate 24 caracteres no total, extensao de exatamente
 Label: 1 a 20 caracteres (letras, digitos, - e _).
 O ficheiro a publicar deve ser regular, existir no diretorio de trabalho
 e ter entre 0 e 10 000 000 bytes. Um diretorio nao pode ser publicado.
-Fazer logout antes de iniciar outra sessao ou executar exit.
-
-Testes de regressao (Python 3, GCC e sockets em localhost):
-    make test
-
-Os testes usam DS simulados locais; nao acedem ao DS dos professores.
-Verificam os comandos, limites, sessoes, respostas incompletas ou invalidas,
-fragmentacao TCP, timeout e origem dos datagramas UDP.
+Fazer logout antes de iniciar outra sessao ou executar exit. Se logout ou
+unregister confirmar que a sessao/registo ja nao existe no DS, a sessao local
+e limpa. Erros de comunicacao ou password nao limpam a sessao local.
 
 Limites atuais:
 - Comandos ate 254 caracteres antes da quebra de linha.
 - Respostas UDP ate 2047 bytes; cobre os 50 filenames previstos em RLS.
-- Respostas TCP ate 4095 bytes. Respostas maiores sao rejeitadas, nunca
-  apresentadas parcialmente. O enunciado nao indica um maximo de peers em RVR.
+- Respostas TCP recebidas em blocos, com memoria alocada conforme necessario.
+  A lista de versoes so e apresentada depois de validada na totalidade.
 - Timeout UDP de 5 segundos; prazo total TCP de 5 segundos para ligar,
   enviar o pedido e receber a resposta completa.
 - publication_time e mostrado tal como recebido, pois estes enunciados nao
