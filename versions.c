@@ -33,18 +33,21 @@ int versions(const AppConfig *config, const char *filename)
     capacity = strlen(response) / 16;
     type = strtok(response, " \n");
     status = strtok(NULL, " \n");
-    if (type == NULL || status == NULL || strcmp(type, "RVR") != 0)
+    if (type == NULL || status == NULL || strcmp(type, "RVR") != 0) {
         goto invalid;
+    }
     token = strtok(NULL, " \n");
     if (strcmp(status, "NOK") == 0 && token == NULL) {
         printf("no versions available for this resource\n");
         free(response);
         return 0;
     }
-    if (strcmp(status, "OK") != 0)
+    if (strcmp(status, "OK") != 0) {
         goto invalid;
-    if (capacity == 0)
+    }
+    if (capacity == 0) {
         goto invalid;
+    }
     entries = calloc(capacity, sizeof(*entries));
     if (entries == NULL) {
         printf("not enough memory to display versions\n");
@@ -54,16 +57,18 @@ int versions(const AppConfig *config, const char *filename)
     while (token != NULL) {
         char *size, *label, *time, *availability;
         long value;
-        if (count == capacity || !validate_uid(token))
+        if (count == capacity || !validate_uid(token)) {
             goto invalid;
+        }
         size = strtok(NULL, " \n");
         label = strtok(NULL, " \n");
         time = strtok(NULL, " \n");
         availability = strtok(NULL, " \n");
         if (size == NULL || label == NULL || time == NULL || availability == NULL ||
             !parse_file_size(size, &value) || !validate_label(label) ||
-            (strcmp(availability, "AVL") != 0 && strcmp(availability, "NAV") != 0))
+            (strcmp(availability, "AVL") != 0 && strcmp(availability, "NAV") != 0)) {
             goto invalid;
+        }
         /* O enunciado nao define o formato de publication_time; preservar o campo. */
         entries[count].uid = token;
         entries[count].size = value;
@@ -73,8 +78,9 @@ int versions(const AppConfig *config, const char *filename)
         count++;
         token = strtok(NULL, " \n");
     }
-    if (count == 0)
+    if (count == 0) {
         goto invalid;
+    }
     printf("Available versions for '%s':\n", filename);
     printf("%-4s %-10s %-10s %-18s %-20s %-10s\n",
            "No.", "UID", "Size(B)", "Label", "Publication time", "Status");

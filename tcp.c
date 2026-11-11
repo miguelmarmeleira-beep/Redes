@@ -27,8 +27,9 @@ int send_tcp_request(const AppConfig *config, const char *message,
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
-    if (getaddrinfo(config->ds_ip, port, &hints, &res) != 0)
+    if (getaddrinfo(config->ds_ip, port, &hints, &res) != 0) {
         return -1;
+    }
 
     fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if (fd < 0) {
@@ -47,8 +48,9 @@ int send_tcp_request(const AppConfig *config, const char *message,
     /* TCP pode enviar apenas parte do pedido em cada chamada. */
     while (sent < length) {
         ssize_t n = send(fd, message + sent, length - sent, MSG_NOSIGNAL);
-        if (n < 0 && errno == EINTR)
+        if (n < 0 && errno == EINTR) {
             continue;
+        }
         if (n <= 0) {
             close(fd);
             return -1;
@@ -66,19 +68,23 @@ int send_tcp_request(const AppConfig *config, const char *message,
         char *grown;
 
         if (used == capacity - 1) {
-            if (capacity > SIZE_MAX / 2)
+            if (capacity > SIZE_MAX / 2) {
                 break;
+            }
             grown = realloc(buffer, capacity * 2);
-            if (grown == NULL)
+            if (grown == NULL) {
                 break;
+            }
             buffer = grown;
             capacity *= 2;
         }
         n = read(fd, buffer + used, capacity - used - 1);
-        if (n < 0 && errno == EINTR)
+        if (n < 0 && errno == EINTR) {
             continue;
-        if (n < 0)
+        }
+        if (n < 0) {
             break;
+        }
         if (n == 0) {
             result = -2; /* A ligacao fechou antes do fim da resposta. */
             break;

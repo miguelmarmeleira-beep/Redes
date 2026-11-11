@@ -11,16 +11,19 @@ static int parse_port(const char *text, int *port)
 {
     char *end;
     long value;
-    if (*text == '\0')
+    if (*text == '\0') {
         return 0;
+    }
     for (const char *p = text; *p; p++) {
-        if (*p < '0' || *p > '9')
+        if (*p < '0' || *p > '9') {
             return 0;
+        }
     }
     errno = 0;
     value = strtol(text, &end, 10);
-    if (errno != 0 || *end != '\0' || value < 1 || value > 65535)
+    if (errno != 0 || *end != '\0' || value < 1 || value > 65535) {
         return 0;
+    }
     *port = (int)value;
     return 1;
 }

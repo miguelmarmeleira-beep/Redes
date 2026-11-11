@@ -18,13 +18,15 @@ int send_udp_request(const AppConfig *config, const char *message,
     ssize_t nsent, nread;
     size_t length = strlen(message);
 
-    if (response_size < 2)
+    if (response_size < 2) {
         return -1;
+    }
     response[0] = '\0';
 
     fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (fd < 0)
+    if (fd < 0) {
         return -1;
+    }
 
     snprintf(port, sizeof(port), "%d", config->ds_port);
     memset(&hints, 0, sizeof(hints));
